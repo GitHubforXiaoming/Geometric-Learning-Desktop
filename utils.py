@@ -40,9 +40,29 @@ def serialize_centers(centers):
 
     return np.array([centers[x] for x in serialized_indices])
 
+
+def random_sample(X, l=100):
+    res = []
+    indices = np.random.randint(len(X), size=l)
+    for index in indices:
+        res.append(X[index])
+    return np.array(res)
+
+
+def make_pair(fixed_points, float_points, indices):
+    assert len(float_points) == len (indices) and len(fixed_points) == len(indices)
+    X = []
+    Y = []
+    for i in range(len(indices)):
+        X.append(fixed_points[i])
+        Y.append(float_points[indices[i]])
+    return np.array(X), np.array(Y)
+
+
 print('test time begin at ' + time.asctime(time.localtime(time.time())) + '\n')
 all_centers = []
 all_points = []
+original_points = []
 
 dir_of_fractures = './fractures/'
 file_names = os.listdir(dir_of_fractures)
@@ -56,8 +76,8 @@ for file_name in file_names:
     for i in range(n):
         X[i] = points.GetPoint(i)
 
-    # random sample
-    all_points.append(random.sample(X, 100))
+    original_points.append(X)
+
     kmeans = KMeans(n_clusters=10)
     kmeans.fit(X)
     centers = kmeans.cluster_centers_
@@ -88,18 +108,26 @@ for file_name in file_names:
     # datas.append(poly_data)
     # tv.visualize_models_auto(datas)
 
+# random sample
+l = min([len(x) for x in original_points])
+for points in original_points:
+    all_points.append(random_sample(points, l))
+
+
 all_centers = np.array(all_centers)
 all_points = np.array(all_points)
+original_points = np.array(original_points)
 centers = np.array([np.mean(center, 0) for center in all_centers])
 
+
 tv = TridimensionalVisualization()
-fv = FlatVisualization()
 icp = ICP()
 transform = Transform()
 
 points = all_points
 for i in range(len(points)):
     min_bais = []
+    alternative_pair = {}
     for j in range(len(points)):
         if i != j and abs(i - j) != 1:
             # T, distances, _ = icp.icp(all_centers[i], all_centers[j], max_iterations=80)
@@ -118,18 +146,31 @@ for i in range(len(points)):
             # fixed_a, float_b = all_centers[i][0], all_centers[i][-1]
             # float_a, float_b = all_centers[j][0], all_centers[j][-1]
             fixed_points, float_points = points[i], points[j]
-            title = file_names[i] + ' compare to ' + file_names[j]
-            print(title)
-            float_points_, bias, main_axis_matrix, secondary_axis_matrix, translate_axis_matrix = \
-                transform.collimate_axis(fixed_points, float_points)
-
+            res = transform.collimate_axis(fixed_points, float_points)
+            indices = np.zeros(len(fixed_points))
+            if len(res) is 7:
+                float_points_, indices, bias, main_axis_matrix, secondary_axis_matrix, translate_axis_matrix, type = res
+            else:
+                float_points_, indices, bias, axis_matrix, translate_axis_matrix, type = res
             min_bais.append(bias)
-
+            alternative_pair[file_names[j]] = bias
             # fv.paint_two_points(fixed_points, float_points_, arrow=True)
-            
+            fig = plt.figure()
+            ax = Axes3D(fig)
+            fv = FlatVisualization(ax)
+            X, Y = make_pair(fixed_points, float_points_, indices)
+            fv.paint_multi_lines(X, Y)
+            fv.set_title(file_names[i] + ' compares to ' + file_names[j])
+            fig.savefig('./fracture_comparsion_pics/' + file_names[i] + ' compares to ' + file_names[j] + '.png', dpi=600)
+            # plt.show()
 
         else:
+            alternative_pair[file_names[j]] = np.inf
             min_bais.append(np.inf)
+    alternative_pair = sorted(alternative_pair.items(), key = lambda x:x[1])
+    for pair in alternative_pair:
+        if pair[1] is not np.inf:
+            print(file_names[i], ' compare to ', pair[0], ' with bias ', pair[1])
     print('---', file_names[i], ' - ', file_names[min_bais.index(min(min_bais))], ': ', min(min_bais), '\n')
 
 print('test time end at ' + time.asctime(time.localtime(time.time())) + '\n')

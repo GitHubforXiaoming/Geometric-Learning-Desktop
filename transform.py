@@ -1,3 +1,4 @@
+import const_values
 import math
 import vtk
 
@@ -6,6 +7,8 @@ from sklearn.decomposition import PCA
 from sklearn.neighbors import NearestNeighbors
 
 from visualization import FlatVisualization
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
 
 class Transform:
 
@@ -152,11 +155,17 @@ class Transform:
         '''
         # record the transformation matrix of each step
         index = 0
+        indices = np.zeros(len(fixed_points))
+        indices_main = np.zeros(len(fixed_points))
+        indices_secondary = np.zeros(len(fixed_points))
         main_axis_matrices = []
         secondary_axis_matrices = []
         translate_axis_matrices = []
 
         points = float_points
+        points_main, points_secondary = float_points, float_points
+        main_axis_matrix, secondary_axis_matrix = vtk.vtkMatrix4x4(), vtk.vtkMatrix4x4()
+        main_translate_matrix, secondary_translate_matrix = vtk.vtkMatrix4x4(), vtk.vtkMatrix4x4()
         bias = np.inf
         icp = ICP()
         # compute the main axis of fixed points
@@ -168,6 +177,8 @@ class Transform:
 
         tip = ['main', 'reversed main', 'secondary', 'reversed secondary']
 
+
+        # rotation by axes include main axis and secondary
         for i in range(len(fixed_main_axis)):
             for j in range(len(float_main_axis)):
                 # firstly, align the main axis of two points
@@ -182,9 +193,10 @@ class Transform:
                 float_components = self.compute_axis(points_main_axis_transformed)
                 float_secondary_axis = np.array([float_components[1], -float_components[1]])
                 # 
+                title1 = '① FXMA-' + str(chr(97 + i)) + ' algin with FLMA-' + str(chr(97 + j)) + ' '
                 for k in range(len(fixed_secondary_axis)):
                     for l in range(len(float_secondary_axis)):
-
+                        
                         # push back the previous rotation matrix
                         main_axis_matrices.append(rotate_matrix)
 
@@ -204,13 +216,97 @@ class Transform:
                         translate_axis_matrices.append(translate_axis_matrices)
 
                         points_translated = self.transform_points(translate_matrix, points_secondary_axis_transformed)
-                        
-                        if np.mean(icp.nearest_neighbor(fixed_points, points_translated)) < bias:
-                            bias = np.mean(icp.nearest_neighbor(fixed_points, points_translated))
+
+                        distances, indices_ = icp.nearest_neighbor(fixed_points, points_translated)
+
+                        # plot
+                        title2 = '② FXSA-' + str(chr(97 + k)) + ' algin with FLSA-' + str(chr(97 + l))
+                        title = title1 + title2
+                        fig = plt.figure()
+                        ax = Axes3D(fig)
+                        fv = FlatVisualization(ax)
+                        fv.paint_two_points(fixed_points, points_translated, title= title)
+                        fig.savefig('./axis_transformation_pics/' + title + '.png', dpi=600)
+                        # plt.show()  
+
+                        if np.mean(distances) < bias:
+                            indices = indices_
+                            bias = np.mean(distances)
                             points = points_translated
                             index = int(str(i) + str(j) + str(k) + str(l), 2)
 
-        return points, bias, main_axis_matrices[index], secondary_axis_matrices[index], translate_axis_matrices[index]
+        # rotation by only the one axis, main axis or secondary axis
+        bias_main = np.inf
+        for i in range(len(fixed_main_axis)):
+            for j in range(len(float_main_axis)):
+                # firstly, align the main axis of two points
+                theta = self.angle_of_normal(fixed_main_axis[i], float_main_axis[j])
+                axis = np.cross(fixed_main_axis[i], float_main_axis[j])
+                rotate_matrix = self.rotate_by_any_axis(axis, theta)
+                
+                # apply the first transformation
+                points_main_axis_transformed = self.transform_points(rotate_matrix, float_points)
+
+                fixed_center = np.mean(fixed_points, 0)
+                float_center = np.mean(points_main_axis_transformed, 0)
+                translate_matrix = self.translate(fixed_center, float_center)
+
+                points_main_translated = self.transform_points(translate_matrix, points_main_axis_transformed)
+
+                title = 'FXMA-' + str(chr(97 + i)) + ' algin with FLMA-' + str(chr(97 + j))
+                fig = plt.figure()
+                ax = Axes3D(fig)
+                fv = FlatVisualization(ax)
+                fv.paint_two_points(fixed_points, points_translated, title=title)
+                fig.savefig('./axis_transformation_pics/' + title + '.png', dpi=600)
+                # plt.show()  
+
+                distances, indices_ = icp.nearest_neighbor(fixed_points, points_main_translated)
+                if np.mean(distances) < bias_main:
+                    indices_main = indices_
+                    bias_main = np.mean(distances)
+                    points_main = points_translated
+                    main_axis_matrix, main_translate_matrix = rotate_matrix, translate_matrix
+                
+        bias_secondary = np.inf
+        for i in range(len(fixed_secondary_axis)):
+            for j in range(len(float_secondary_axis)):
+                # firstly, align the main axis of two points
+                theta = self.angle_of_normal(fixed_secondary_axis[i], float_secondary_axis[j])
+                axis = np.cross(fixed_secondary_axis[i], float_secondary_axis[j])
+                rotate_matrix = self.rotate_by_any_axis(axis, theta)
+                
+                # apply the first transformation
+                points_secondary_axis_transformed = self.transform_points(rotate_matrix, float_points)
+
+                fixed_center = np.mean(fixed_points, 0)
+                float_center = np.mean(points_secondary_axis_transformed, 0)
+                translate_matrix = self.translate(fixed_center, float_center)
+
+                points_secondary_translated = self.transform_points(translate_matrix, points_secondary_axis_transformed)
+
+                title = 'FXSA-' + str(chr(97 + i)) + ' algin with FLSA-' + str(chr(97 + j))
+                fig = plt.figure()
+                ax = Axes3D(fig)
+                fv = FlatVisualization(ax)
+                fv.paint_two_points(fixed_points, points_translated, title=title)
+                fig.savefig('./axis_transformation_pics/' + title + '.png', dpi=600)
+                # plt.show()  
+                
+                distances, indices_ = icp.nearest_neighbor(fixed_points, points_secondary_translated)
+                if np.mean(distances) < bias_secondary:
+                    indices_secondary = indices_
+                    bias_secondary = np.mean(distances)
+                    points_main = points_translated
+                    secondary_axis_matrix, secondary_translate_matrix = rotate_matrix, translate_matrix
+                    
+        if bias < bias_main and bias < bias_secondary:
+            return points, indices, bias, \
+                main_axis_matrices[index], secondary_axis_matrices[index], translate_axis_matrices[index], const_values.const.AXIS_TYPE['both']
+        elif bias_main < bias and bias_main < bias_secondary:
+            return points_main, indices_main, bias_main, main_axis_matrix, main_translate_matrix, const_values.const.AXIS_TYPE['main']
+        else:
+            return points_secondary, indices_secondary, bias_secondary, secondary_axis_matrix, secondary_translate_matrix, const_values.const.AXIS_TYPE['secondary']
 
     def turn_over_by_axis(self, axis):
         return self.rotate_by_any_axis(axis, np.pi / 2)

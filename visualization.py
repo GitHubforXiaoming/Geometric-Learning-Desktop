@@ -1,4 +1,4 @@
-import const
+import const_values
 import vtk
 import math
 import numpy as np
@@ -115,6 +115,10 @@ class TridimensionalVisualization:
 
 class FlatVisualization:
 
+    def __init__(self, ax):
+        self.ax = ax
+
+    
     def quiver3d(self, X, ax):
         pca = PCA(n_components=3)
         center = np.mean(X, 0)
@@ -129,33 +133,46 @@ class FlatVisualization:
         ax.quiver(x, y, z, u, v, w, length=30, pivot='tip')
 
     def paint_two_points(self, X, Y, title='', arrow=False):
-        fig = plt.figure() 
-        ax = Axes3D(fig)    
-        ax.scatter(X[:, 0], X[:, 1], X[:, 2], marker='o', s=50, c='crimson')
+        # fig = plt.figure() 
+        # ax = Axes3D(fig)    
+        self.ax.scatter(X[:, 0], X[:, 1], X[:, 2], marker='o', s=50, c='crimson')
         if arrow:
             self.quiver3d(X, ax)
-        ax.scatter(Y[:, 0], Y[:, 1], Y[:, 2], marker='o', s=50, c='darkcyan')
+        self.ax.scatter(Y[:, 0], Y[:, 1], Y[:, 2], marker='o', s=50, c='darkcyan')
         if arrow:
             self.quiver3d(Y, ax)
-        ax.set_xlabel('x', color='r')
-        ax.set_ylabel('y', color='g')
-        ax.set_zlabel('z', color='b') 
-        ax.set_title(title)
-        plt.show()
+        self.ax.set_xlabel('x', color='r')
+        self.ax.set_ylabel('y', color='g')
+        self.ax.set_zlabel('z', color='b') 
+        self.ax.set_title(title)
     
     def paint_points(self, X):
-        fig = plt.figure() 
-        ax = Axes3D(fig)    
-        ax.scatter(X[:, 0], X[:, 1], X[:, 2], marker='o', s=50, c='blue')
-        ax.set_xlabel('x', color='r')
-        ax.set_ylabel('y', color='g')
-        ax.set_zlabel('z', color='b') 
-        plt.show()
+        # fig = plt.figure() 
+        # ax = Axes3D(fig)    
+        self.ax.scatter(X[:, 0], X[:, 1], X[:, 2], marker='o', s=50, c='blue')
+        self.ax.set_xlabel('x', color='r')
+        self.ax.set_ylabel('y', color='g')
+        self.ax.set_zlabel('z', color='b') 
 
 
     def paint_line(self, X):
-        fig = plt.figure()
-        ax = Axes3D(fig)
-        ax.scatter(X[:, 0], X[:, 1], X[:, 2], c='crimson')
-        ax.plot(X[:, 0], X[:, 1], X[:, 2], c='forestgreen')
-        plt.show()  
+        # fig = plt.figure()
+        # ax = Axes3D(fig)
+        self.ax.scatter(X[:, 0], X[:, 1], X[:, 2], c='crimson')
+        self.ax.plot(X[:, 0], X[:, 1], X[:, 2], c='forestgreen')
+
+    
+    def paint_multi_lines(self, X, Y):
+        # fig = plt.figure()
+        # ax = Axes3D(fig)
+        self.ax.scatter(X[:, 0], X[:, 1], X[:, 2], marker='h', s=50, c='black')
+        self.ax.scatter(Y[:, 0], Y[:, 1], Y[:, 2], marker='o', s=50, c='red')
+        for x, y in zip(X, Y):
+            line = np.array([x, y])
+            # self.ax.plot(line[:, 0], line[:, 1], line[:, 2], c=const_values.const.FLAT_COLOR[np.random.randint(len(const_values.const.FLAT_COLOR))])
+            self.ax.plot(line[:, 0], line[:, 1], line[:, 2], c='silver')
+
+    def set_title(self, title):
+        if title is not '':
+            self.ax.set_title(title)
+        
