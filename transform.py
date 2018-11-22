@@ -1,5 +1,6 @@
 import const_values
 import math
+import os
 import vtk
 
 import numpy as np
@@ -141,7 +142,7 @@ class Transform:
 
         return pca.components_[0], pca.components_[1]
 
-    def collimate_axis(self, fixed_points, float_points):
+    def collimate_axis(self, fixed_points, float_points, path):
         '''
         collimate the fixed main axis and fixed secondary axis with the float ones
         there are three times transformation totaly
@@ -226,7 +227,8 @@ class Transform:
                         ax = Axes3D(fig)
                         fv = FlatVisualization(ax)
                         fv.paint_two_points(fixed_points, points_translated, title= title)
-                        fig.savefig('./axis_transformation_pics/' + title + '.png', dpi=600)
+                        fig.savefig(path + title + '.png', dpi=600)
+                        plt.close(fig)
                         # plt.show()  
 
                         if np.mean(distances) < bias:
@@ -258,7 +260,8 @@ class Transform:
                 ax = Axes3D(fig)
                 fv = FlatVisualization(ax)
                 fv.paint_two_points(fixed_points, points_translated, title=title)
-                fig.savefig('./axis_transformation_pics/' + title + '.png', dpi=600)
+                fig.savefig(path+ title + '.png', dpi=600)
+                plt.close(fig)
                 # plt.show()  
 
                 distances, indices_ = icp.nearest_neighbor(fixed_points, points_main_translated)
@@ -290,7 +293,8 @@ class Transform:
                 ax = Axes3D(fig)
                 fv = FlatVisualization(ax)
                 fv.paint_two_points(fixed_points, points_translated, title=title)
-                fig.savefig('./axis_transformation_pics/' + title + '.png', dpi=600)
+                fig.savefig(path +title + '.png', dpi=600)
+                plt.close(fig)
                 # plt.show()  
                 
                 distances, indices_ = icp.nearest_neighbor(fixed_points, points_secondary_translated)

@@ -146,7 +146,13 @@ for i in range(len(points)):
             # fixed_a, float_b = all_centers[i][0], all_centers[i][-1]
             # float_a, float_b = all_centers[j][0], all_centers[j][-1]
             fixed_points, float_points = points[i], points[j]
-            res = transform.collimate_axis(fixed_points, float_points)
+            # make dir
+            path = './axis_transformation_pics/' + file_names[i][:-4] + '&' + file_names[j][:-4] + './'
+            if not os.path.exists(path):
+                print(path)
+                os.makedirs(path)
+
+            res = transform.collimate_axis(fixed_points, float_points, path)
             indices = np.zeros(len(fixed_points))
             if len(res) is 7:
                 float_points_, indices, bias, main_axis_matrix, secondary_axis_matrix, translate_axis_matrix, type = res
