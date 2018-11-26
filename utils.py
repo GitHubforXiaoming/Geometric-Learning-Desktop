@@ -65,48 +65,50 @@ all_points = []
 original_points = []
 
 dir_of_fractures = './fractures/'
+prefix = '3'
 file_names = os.listdir(dir_of_fractures)
 
 for file_name in file_names:
-    poly_data = read_stl(dir_of_fractures + file_name)
-    n = poly_data.GetNumberOfPoints()
-    X = np.zeros((n, 3), dtype=np.float64)
-    # visualization(data)
-    points = poly_data.GetPoints()
-    for i in range(n):
-        X[i] = points.GetPoint(i)
+    if file_name.startswith(prefix):
+        poly_data = read_stl(dir_of_fractures + file_name)
+        n = poly_data.GetNumberOfPoints()
+        X = np.zeros((n, 3), dtype=np.float64)
+        # visualization(data)
+        points = poly_data.GetPoints()
+        for i in range(n):
+            X[i] = points.GetPoint(i)
 
-    original_points.append(X)
+        original_points.append(X)
 
-    kmeans = KMeans(n_clusters=10)
-    kmeans.fit(X)
-    centers = kmeans.cluster_centers_
+        kmeans = KMeans(n_clusters=6)
+        kmeans.fit(X)
+        centers = kmeans.cluster_centers_
 
-    # serialize the center points
-    centers = serialize_centers(centers)
-    all_centers.append(centers)
+        # serialize the center points
+        centers = serialize_centers(centers)
+        all_centers.append(centers)
 
-    # compute the pca of center points
-    pca = PCA(n_components=3)
-    pca.fit(np.array(centers))
+        # compute the pca of center points
+        pca = PCA(n_components=3)
+        pca.fit(np.array(centers))
 
 
-    # connect points in proper sequence 
+        # connect points in proper sequence 
 
-    # fv = FlatVisualization()
-    # fv.paint_line(centers)
+        # fv = FlatVisualization()
+        # fv.paint_line(centers)
 
-    # visualize fracture with the contral points (center points)
+        # visualize fracture with the contral points (center points)
 
-    # tv = TridimensionalVisualization(poly_data)
-    # center_points_data = tv.visualize_points(centers)
-    # tv.visualize_models_man(poly_data, center_points_data)
-    # datas = []
-    # for center in centers:
-    #    sphere = tv.draw_sphere(center, 2)
-    #    datas.append(sphere)
-    # datas.append(poly_data)
-    # tv.visualize_models_auto(datas)
+        # tv = TridimensionalVisualization(poly_data)
+        # center_points_data = tv.visualize_points(centers)
+        # tv.visualize_models_man(poly_data, center_points_data)
+        # datas = []
+        # for center in centers:
+        #    sphere = tv.draw_sphere(center, 2)
+        #    datas.append(sphere)
+        # datas.append(poly_data)
+        # tv.visualize_models_auto(datas)
 
 # random sample
 l = min([len(x) for x in original_points])
@@ -124,7 +126,7 @@ tv = TridimensionalVisualization()
 icp = ICP()
 transform = Transform()
 
-points = all_points
+points = all_centers
 for i in range(len(points)):
     min_bais = []
     alternative_pair = {}
@@ -152,23 +154,9 @@ for i in range(len(points)):
                 print(path)
                 os.makedirs(path)
 
-            res = transform.collimate_axis(fixed_points, float_points, path)
-            indices = np.zeros(len(fixed_points))
-            if len(res) is 7:
-                float_points_, indices, bias, main_axis_matrix, secondary_axis_matrix, translate_axis_matrix, type = res
-            else:
-                float_points_, indices, bias, axis_matrix, translate_axis_matrix, type = res
+            float_points_, bias, identification = transform.collimate_axis(fixed_points, float_points, path)
             min_bais.append(bias)
-            alternative_pair[file_names[j]] = bias
-            # fv.paint_two_points(fixed_points, float_points_, arrow=True)
-            fig = plt.figure()
-            ax = Axes3D(fig)
-            fv = FlatVisualization(ax)
-            X, Y = make_pair(fixed_points, float_points_, indices)
-            fv.paint_multi_lines(X, Y)
-            fv.set_title(file_names[i] + ' compares to ' + file_names[j])
-            fig.savefig('./fracture_comparsion_pics/' + file_names[i] + ' compares to ' + file_names[j] + '.png', dpi=600)
-            # plt.show()
+            transform.save_fig('./fracture_comparsion_pics/', file_names[i] + ' compares to ' + file_names[j] + '.png', fixed_points, float_points_)
 
         else:
             alternative_pair[file_names[j]] = np.inf
