@@ -223,64 +223,6 @@ class Transform:
                                     float_points_ = points
                                 #save the transformation results to directory
                                 self.save_fig(path, title, fixed_points, points)
-                
-        
-        # for i in range(len(fixed_main_axis)):
-        #     for j in range(len(float_main_axis)):
-        #         # firstly, align the main axis of two points
-        #         theta = self.angle_of_normal(fixed_main_axis[i], float_main_axis[j])
-        #         axis = np.cross(fixed_main_axis[i], float_main_axis[j])
-        #         rotate_matrix = self.rotate_by_any_axis(axis, theta)
-                
-        #         # apply the first transformation
-        #         points_main_axis_transformed = self.transform_points(rotate_matrix, float_points)
-
-        #         # compute the axis after main axis transformation
-        #         float_components = self.compute_axis(points_main_axis_transformed)
-        #         float_secondary_axis = np.array([float_components[1], -float_components[1]])
-        #         # 
-        #         title1 = '① FXMA-' + str(chr(97 + i)) + ' algin with FLMA-' + str(chr(97 + j)) + ' '
-        #         for k in range(len(fixed_secondary_axis)):
-        #             for l in range(len(float_secondary_axis)):
-                        
-        #                 # push back the previous rotation matrix
-        #                 main_axis_matrices.append(rotate_matrix)
-
-        #                 # secondly, align the secondary axis of two points
-        #                 theta = self.angle_of_normal(fixed_secondary_axis[i], float_secondary_axis[j])
-        #                 axis = np.cross(fixed_secondary_axis[i], float_secondary_axis[j])
-        #                 rotate_matrix = self.rotate_by_any_axis(axis, theta)
-        #                 secondary_axis_matrices.append(rotate_matrix)
-                        
-        #                 # apply the first transformation
-        #                 points_secondary_axis_transformed = self.transform_points(rotate_matrix, points_main_axis_transformed)
-
-        #                 # finally, translate the center points of two points
-        #                 fixed_center = np.mean(fixed_points, 0)
-        #                 float_center = np.mean(points_secondary_axis_transformed, 0)
-        #                 translate_matrix = self.translate(fixed_center, float_center)
-        #                 translate_axis_matrices.append(translate_axis_matrices)
-
-        #                 points_translated = self.transform_points(translate_matrix, points_secondary_axis_transformed)
-
-        #                 distances, indices_ = icp.nearest_neighbor(fixed_points, points_translated)
-
-        #                 # plot
-        #                 # title2 = '② FXSA-' + str(chr(97 + k)) + ' algin with FLSA-' + str(chr(97 + l))
-        #                 # title = title1 + title2
-        #                 # fig = plt.figure()
-        #                 # ax = Axes3D(fig)
-        #                 # fv = FlatVisualization(ax)
-        #                 # fv.paint_two_points(fixed_points, points_translated, title= title)
-        #                 # fig.savefig(path + title + '.png', dpi=600)
-        #                 # plt.close(fig)
-        #                 # plt.show()  
-
-        #                 if np.mean(distances) < bias:
-        #                     indices = indices_
-        #                     bias = np.mean(distances)
-        #                     points = points_translated
-        #                     index = int(str(i) + str(j) + str(k) + str(l), 2)
 
         # rotation by only the one axis, main axis or secondary axis
         bias_main = np.inf
@@ -313,6 +255,27 @@ class Transform:
             return points_main, bias_main, const_values.const.AXIS_TYPE['main']
         else:
             return points_secondary, bias_secondary, const_values.const.AXIS_TYPE['secondary']
+
+
+    def collimate_axis_general(self, fixed_points, float_points, path):
+        # select the same points from fixed points and float points
+        m, n = len(fixed_points), len(float_points)
+        float_points_ = float_points
+        bias = 0
+        identification = 0
+        if m < n:
+            points_1, bias_1, identification_1 = self.collimate_axis(fixed_points, float_points[:m], path)
+            points_2, bias_2, identification_2 = self.collimate_axis(fixed_points, float_points[n - m:], path)
+            if bias_1 < bias_2: float_points_, bias, identification = points_1, bias_1, identification_1
+            else: float_points_, bias, identification = points_2, bias_2, identification_2
+        elif m > n:
+            points_1, bias_1, identification_1 = self.collimate_axis(fixed_points[:n], float_points, path)
+            points_2, bias_2, identification_2 = self.collimate_axis(fixed_points[m - n:], float_points, path)
+            if bias_1 < bias_2: float_points_, bias, identification = points_1, bias_1, identification_1
+            else: float_points_, bias, identification = points_2, bias_2, identification_2
+        else:
+            return self.collimate_axis(fixed_points, float_points, path)
+        return float_points_, bias, identification
 
     def turn_over_by_axis(self, axis):
         return self.rotate_by_any_axis(axis, np.pi / 2)

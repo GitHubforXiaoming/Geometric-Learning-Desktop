@@ -12,8 +12,9 @@ from visualization import *
 
 class Utils:
 
-    def __init__(self, prefix):
+    def __init__(self, prefix, k=6):
         self.prefix = prefix
+        self.k = k
 
     def read_stl(self, file_name):
         reader = vtk.vtkSTLReader()
@@ -44,6 +45,10 @@ class Utils:
         return np.array([centers[x] for x in serialized_indices])
 
 
+    def length_of_fracture(self, centers):
+        return np.linalg.norm(centers[0] - centers[-1])
+
+
     def random_sample(self, X, l=100):
         res = []
         indices = np.random.randint(len(X), size=l)
@@ -66,6 +71,7 @@ class Utils:
         all_points = []
         all_random_points = []
         all_centers = []
+        all_length = []
 
         file_names = os.listdir(const_values.FLAGS.dir_of_fractures)
 
@@ -81,28 +87,33 @@ class Utils:
 
                 all_points.append(X)
 
-                kmeans = KMeans(n_clusters=6)
-                kmeans.fit(X)
-                centers = kmeans.cluster_centers_
-
-                # serialize the center points
-                centers = self.serialize_centers(centers)
-                all_centers.append(centers)
-
-                # compute the pca of center points
-                pca = PCA(n_components=3)
-                pca.fit(np.array(centers))
-
                 # random sample
                 l = min([len(x) for x in all_points])
                 for points in all_points:
                     all_random_points.append(self.random_sample(points, l))
 
-        return np.array(all_points), np.array(all_random_points), np.array(all_centers), file_names
+        avg_num = np.mean(np.array([len(x) for x in all_points]))
+        for X in all_points:
+            k = self.k
+            if len(X) < avg_num:
+                k = self.k // 2 + 1
+            kmeans = KMeans(n_clusters=k)
+            kmeans.fit(X)
+            centers = kmeans.cluster_centers_
+
+            # serialize the center points
+            centers = self.serialize_centers(centers)
+
+            # compute the length of each fracture
+            all_length.append(self.length_of_fracture(centers))
+            all_centers.append(centers)
+
+        return np.array(all_points), np.array(all_random_points), np.array(all_centers), np.array(all_length),\
+            [name for name in file_names if name.startswith(self.prefix)]
 
 
     def comparsion(self):
-        all_points, all_random_points, all_centers, file_names = self.generate_datas()
+        all_points, all_random_points, all_centers, all_length, file_names = self.generate_datas()
         centers = np.array([np.mean(center, 0) for center in all_centers])
 
         icp = ICP()
@@ -116,12 +127,12 @@ class Utils:
                 if i != j and abs(i - j) != 1:
                     fixed_points, float_points = points[i], points[j]
                     # make dir
-                    path = const_values.FLAGS.dir_of_axis_transformation_pics + file_names[i][:-4] + '&' + file_names[j][:-4] + './'
+                    path = const_values.FLAGS.dir_of_axis_transformation_pics + file_names[i][:-4] + '&' + file_names[j][:-4] + '/'
                     if not os.path.exists(path):
                         print(path)
                         os.makedirs(path)
 
-                    float_points_, bias, identification = transform.collimate_axis(fixed_points, float_points, path)
+                    float_points_, bias, identification = transform.collimate_axis_general(fixed_points, float_points, path)
                     min_bais.append(bias)
                     transform.save_fig(const_values.FLAGS.dir_of_fracture_comparsion_pics, file_names[i] + ' compares to ' + file_names[j] + '.png', fixed_points, float_points_)
 
