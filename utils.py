@@ -15,7 +15,14 @@ class Utils:
     def __init__(self, prefix, k=6):
         self.prefix = prefix
         self.k = k
+        self.datas = []
 
+
+    # @property
+    # def datas(self):
+    #     return self.datas
+
+    
     def read_stl(self, file_name):
         reader = vtk.vtkSTLReader()
         reader.SetFileName(file_name)
@@ -67,7 +74,7 @@ class Utils:
         return np.array(X), np.array(Y)
 
 
-    def generate_datas(self):
+    def generate_datas(self, is_reduce=False):
         all_points = []
         all_random_points = []
         all_centers = []
@@ -78,6 +85,7 @@ class Utils:
         for file_name in file_names:
             if file_name.startswith(self.prefix):
                 poly_data = self.read_stl(const_values.FLAGS.dir_of_fractures + file_name)
+                self.datas.append(poly_data)
                 n = poly_data.GetNumberOfPoints()
                 X = np.zeros((n, 3), dtype=np.float64)
                 # visualization(data)
@@ -95,7 +103,7 @@ class Utils:
         avg_num = np.mean(np.array([len(x) for x in all_points]))
         for X in all_points:
             k = self.k
-            if len(X) < avg_num:
+            if len(X) < avg_num and is_reduce:
                 k = self.k // 2 + 1
             kmeans = KMeans(n_clusters=k)
             kmeans.fit(X)

@@ -156,6 +156,7 @@ class Transform:
         return points
 
     def save_fig(self, path, title, fixed_points, float_points_):
+        plt.style.use('ggplot')
         fig = plt.figure()
         ax = Axes3D(fig)
         fv = FlatVisualization(ax)

@@ -44,14 +44,14 @@ class TridimensionalVisualization:
     def visualize_models_man(self, *datas):
         ren= vtk.vtkRenderer()  
         i = 0
-        l = len(const.COLOR)
+        l = len(const_values.COLOR)
         for data in datas:
             mapper = vtk.vtkPolyDataMapper()  
             mapper.SetInputData(data)  
             
             actor = vtk.vtkActor()  
             actor.SetMapper(mapper) 
-            actor.GetProperty().SetColor(const.COLOR[i % l][0] / 255.0, const.COLOR[i % l][1] / 255.0, const.COLOR[i % l][2] / 255.0,)
+            actor.GetProperty().SetColor(const_values.COLOR[i % l][0] / 255.0, const_values.COLOR[i % l][1] / 255.0, const_values.COLOR[i % l][2] / 255.0,)
             actor.GetProperty().SetPointSize(10) 
             
             ren.AddActor( actor )  
@@ -77,9 +77,10 @@ class TridimensionalVisualization:
             actor = vtk.vtkActor()  
             actor.SetMapper(mapper) 
             #actor.GetProperty().SetPointSize(10) 
-            
+            actor.GetProperty().SetColor(np.array(const_values.const.COLOR[np.random.randint(0, const_values.const.LEN_OF_COLOR)]) / 255.0)
             ren.AddActor( actor )  
-            ren.SetBackground( 0 / 255.0, 166 / 255.0, 222 / 255.0 ) 
+            # ren.SetBackground( 0 / 255.0, 166 / 255.0, 222 / 255.0 ) 
+            ren.SetBackground( 255 / 255.0, 255 / 255.0, 255 / 255.0 ) 
         renWin = vtk.vtkRenderWindow()  
         renWin.AddRenderer( ren )  
         renWin.SetSize( 300, 300 )  

@@ -3,6 +3,7 @@ import tensorflow as tf
 
 flags = tf.app.flags
 FLAGS = flags.FLAGS
+flags.DEFINE_integer('default_n_cluster', 12, 'the default number of cluster')
 flags.DEFINE_string('dir_of_fractures', './fractures/', 'the directory of fractures')
 flags.DEFINE_string('dir_of_fracture_comparsion_pics', './fracture_comparsion_pics/', 'the directory of comparsion results among the fractures')
 flags.DEFINE_string('dir_of_axis_transformation_pics', './axis_transformation_pics/', 'the directory of comparsion results among ratation between two fractures')
@@ -18,6 +19,8 @@ const.COLOR = [[130, 166, 245],
          [255, 192, 159],
          [255, 192, 159],
          [255, 238, 147]]
+    
+const.LEN_OF_COLOR = len(const.COLOR)
 
       
 const.FLAT_COLOR = [
