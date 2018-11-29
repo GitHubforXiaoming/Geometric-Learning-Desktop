@@ -36,7 +36,7 @@ def parse_args(argv):
             utils = Utils(prefix, k=n_cluster)
             tv = TridimensionalVisualization()
             # visualize the control points on the fracture
-            all_centers = utils.generate_datas(is_reduce=flag)[2]
+            all_centers = utils.generate_datas(is_decrease=flag)[2]
             for data, centers in zip(utils.datas, all_centers):
                 datas = []
                 datas.append(data)
@@ -49,7 +49,7 @@ def parse_args(argv):
             prefix = a
         elif o in ('-t', '--test'):
             utils = Utils(prefix, k=n_cluster)
-            length, names = utils.generate_datas(is_reduce=flag)[-2::]
+            length, names = utils.generate_datas(is_decrease=flag)[-2::]
             print(length, names)
             # print(np.mean(length))
         elif o in ('-d', '--decrease'):
@@ -58,7 +58,7 @@ def parse_args(argv):
             n_cluster = int(a)
         elif o in ('-c', '--comparsion'):
             utils = Utils(prefix, k=n_cluster)
-            utils.comparsion()
+            utils.comparsion(flag)
         else:
             print('unhandled option')
             sys.exit(3)

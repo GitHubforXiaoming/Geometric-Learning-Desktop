@@ -74,7 +74,7 @@ class Utils:
         return np.array(X), np.array(Y)
 
 
-    def generate_datas(self, is_reduce=False):
+    def generate_datas(self, is_decrease=False):
         all_points = []
         all_random_points = []
         all_centers = []
@@ -103,7 +103,7 @@ class Utils:
         avg_num = np.mean(np.array([len(x) for x in all_points]))
         for X in all_points:
             k = self.k
-            if len(X) < avg_num and is_reduce:
+            if len(X) < avg_num and is_decrease:
                 k = self.k // 2 + 1
             kmeans = KMeans(n_clusters=k)
             kmeans.fit(X)
@@ -120,7 +120,7 @@ class Utils:
             [name for name in file_names if name.startswith(self.prefix)]
 
 
-    def comparsion(self):
+    def comparsion(self, is_decrease):
         all_points, all_random_points, all_centers, all_length, file_names = self.generate_datas()
         centers = np.array([np.mean(center, 0) for center in all_centers])
 
