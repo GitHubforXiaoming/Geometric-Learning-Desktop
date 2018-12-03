@@ -44,14 +44,14 @@ class TridimensionalVisualization:
     def visualize_models_man(self, *datas):
         ren= vtk.vtkRenderer()  
         i = 0
-        l = len(const_values.COLOR)
+        l = len(const_values.const.COLOR)
         for data in datas:
             mapper = vtk.vtkPolyDataMapper()  
             mapper.SetInputData(data)  
             
             actor = vtk.vtkActor()  
             actor.SetMapper(mapper) 
-            actor.GetProperty().SetColor(const_values.COLOR[i % l][0] / 255.0, const_values.COLOR[i % l][1] / 255.0, const_values.COLOR[i % l][2] / 255.0,)
+            actor.GetProperty().SetColor(np.array(const_values.const.COLOR[i % l]) / 255.0)
             actor.GetProperty().SetPointSize(10) 
             
             ren.AddActor( actor )  

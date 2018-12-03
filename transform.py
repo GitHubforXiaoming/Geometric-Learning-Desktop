@@ -166,7 +166,7 @@ class Transform:
 
         translate_matrix = self.translate(fixed_center, center)
         points = self.transform_points(translate_matrix, points)
-        return points
+        return points, rotate_matrix, translate_matrix
 
     def save_fig(self, path, title, fixed_points, float_points_):
         print(path + title + '.png')
@@ -179,7 +179,7 @@ class Transform:
         plt.close(fig)
 
 
-    def collimate_axis(self, fixed_points, float_points, path):
+    def collimate_axis(self, fixed_points, float_points, path, is_save=False):
         '''
         collimate the fixed main axis and fixed secondary axis with the float ones
         there are three times transformation totaly
@@ -196,14 +196,15 @@ class Transform:
         indices = np.zeros(len(fixed_points))
         indices_main = np.zeros(len(fixed_points))
         indices_secondary = np.zeros(len(fixed_points))
-        main_axis_matrices = []
-        secondary_axis_matrices = []
-        translate_axis_matrices = []
+        
+        rotate_matrices = []
+        translate_matrices = []
+        proper_fisrt_index, proper_second_index = 0, 0
 
         float_points_ = float_points
         points_main, points_secondary = float_points, float_points
-        main_axis_matrix, secondary_axis_matrix = vtk.vtkMatrix4x4(), vtk.vtkMatrix4x4()
-        main_translate_matrix, secondary_translate_matrix = vtk.vtkMatrix4x4(), vtk.vtkMatrix4x4()
+        main_rotate_matrix, main_translate_matrix = vtk.vtkMatrix4x4(), vtk.vtkMatrix4x4()
+        secondary_rotate_matrix, secondary_translate_matrix = vtk.vtkMatrix4x4(), vtk.vtkMatrix4x4()
         bias = np.inf
         all_bias = []
         icp = ICP()
@@ -221,7 +222,10 @@ class Transform:
             for j in range(2):
                 title1 = '① FXMA-' + str(chr(97 + i)) + ' algin with FLMA-' + str(chr(97 + j)) + ' '
                 if i is 0 and j is 0 or i is 1 and j is 0:
-                    points = self.implicit_transformation(float_points, fixed_main_axis[i], float_main_axis[j], fixed_center)
+                    points, rotate_matrix, translate_matrix = \
+                        self.implicit_transformation(float_points, fixed_main_axis[i], float_main_axis[j], fixed_center)
+                    rotate_matrices.append(rotate_matrix)
+                    translate_matrices.append(translate_matrix)
                     # compute the axis after main axis transformation
                     float_components = self.compute_axis(points)
                     float_secondary_axis = np.array([float_components[1], -float_components[1]])
@@ -230,66 +234,81 @@ class Transform:
                             title2 = '② FXSA-' + str(chr(97 + k)) + ' algin with FLSA-' + str(chr(97 + l))
                             title = title1 + title2
                             if k is 0 and l is 0 or k is 1 and l is 0:
-                                points = self.implicit_transformation(points, fixed_secondary_axis[k], float_secondary_axis[l], fixed_center)
+                                points, rotate_matrix, translate_matrix = \
+                                    self.implicit_transformation(points, fixed_secondary_axis[k], float_secondary_axis[l], fixed_center)
+                                rotate_matrices.append(rotate_matrix)
+                                translate_matrices.append(translate_matrix)
                                 distances, indices_ = icp.nearest_neighbor(fixed_points, points)
                                 all_bias.append(np.mean(distances))
                                 if np.mean(distances) < bias:
+                                    proper_fisrt_index, proper_second_index = i + j, 2 + k + l
                                     bias = np.mean(distances)
                                     float_points_ = points
                                 #save the transformation results to directory
-                                self.save_fig(path, title, fixed_points, points)
+                                if is_save:
+                                    self.save_fig(path, title, fixed_points, points)
 
         # rotation by only the one axis, main axis or secondary axis
         bias_main = np.inf
         for i in range(len(fixed_main_axis)):
             for j in range(len(float_main_axis)):
-                points = self.implicit_transformation(points, fixed_secondary_axis[k], float_secondary_axis[l], fixed_center)
+                points, rotate_matrix, translate_matrix = \
+                    self.implicit_transformation(points, fixed_secondary_axis[k], float_secondary_axis[l], fixed_center)
                 distances, indices_ = icp.nearest_neighbor(fixed_points, points)
                 if np.mean(distances) < bias_main:
+                    main_rotate_matrix, main_translate_matrix = rotate_matrix, translate_matrix
                     bias_main = np.mean(distances)
                     points_main = points
 
                 title = 'FXMA-' + str(chr(97 + i)) + ' algin with FLMA-' + str(chr(97 + j))
-                self.save_fig(path, title, fixed_points, points)
+                if is_save:
+                    self.save_fig(path, title, fixed_points, points)
                 
         bias_secondary = np.inf
         for i in range(len(fixed_secondary_axis)):
             for j in range(len(float_secondary_axis)):
-                points = self.implicit_transformation(points, fixed_secondary_axis[k], float_secondary_axis[l], fixed_center)
+                points, rotate_matrix, translate_matrix = \
+                    self.implicit_transformation(points, fixed_secondary_axis[k], float_secondary_axis[l], fixed_center)
                 distances, indices_ = icp.nearest_neighbor(fixed_points, points)
                 if np.mean(distances) < bias_main:
+                    secondary_rotate_matrix, secondary_translate_matrix = rotate_matrix, translate_matrix
                     bias_main = np.mean(distances)
                     points_secondary = points
                     
                 title = 'FXMA-' + str(chr(97 + i)) + ' algin with FLMA-' + str(chr(97 + j))
-                self.save_fig(path, title, fixed_points, points)
+                if is_save:
+                    self.save_fig(path, title, fixed_points, points)
                     
         if bias < bias_main and bias < bias_secondary:
-            return float_points_, bias, const_values.const.AXIS_TYPE['both']
+            return float_points_, bias, const_values.const.AXIS_TYPE['both'], \
+                [rotate_matrices[proper_fisrt_index], rotate_matrices[proper_second_index]], \
+                [translate_matrices[proper_fisrt_index], translate_matrices[proper_second_index]]
         elif bias_main < bias and bias_main < bias_secondary:
-            return points_main, bias_main, const_values.const.AXIS_TYPE['main']
+            return points_main, bias_main, const_values.const.AXIS_TYPE['main'], \
+                main_rotate_matrix, main_translate_matrix
         else:
-            return points_secondary, bias_secondary, const_values.const.AXIS_TYPE['secondary']
+            return points_secondary, bias_secondary, const_values.const.AXIS_TYPE['secondary'], \
+                secondary_rotate_matrix, secondary_translate_matrix
 
 
-    def collimate_axis_general(self, fixed_points, float_points, path):
+    def collimate_axis_general(self, fixed_points, float_points, path, is_save=False):
         # select the same points from fixed points and float points
         m, n = len(fixed_points), len(float_points)
         float_points_ = float_points
         bias = 0
         identification = 0
         if m < n:
-            points_1, bias_1, identification_1 = self.collimate_axis(fixed_points, float_points[:m], path + '1-')
-            points_2, bias_2, identification_2 = self.collimate_axis(fixed_points, float_points[n - m:], path + '2-')
+            points_1, bias_1, identification_1 = self.collimate_axis(fixed_points, float_points[:m], path + '1-', is_save=is_save)
+            points_2, bias_2, identification_2 = self.collimate_axis(fixed_points, float_points[n - m:], path + '2-', is_save=is_save)
             if bias_1 < bias_2: float_points_, bias, identification = points_1, bias_1, identification_1
             else: float_points_, bias, identification = points_2, bias_2, identification_2
         elif m > n:
-            points_1, bias_1, identification_1 = self.collimate_axis(fixed_points[:n], float_points, path + '3-')
-            points_2, bias_2, identification_2 = self.collimate_axis(fixed_points[m - n:], float_points, path + '4-')
+            points_1, bias_1, identification_1 = self.collimate_axis(fixed_points[:n], float_points, path + '3-', is_save=is_save)
+            points_2, bias_2, identification_2 = self.collimate_axis(fixed_points[m - n:], float_points, path + '4-', is_save=is_save)
             if bias_1 < bias_2: float_points_, bias, identification = points_1, bias_1, identification_1
             else: float_points_, bias, identification = points_2, bias_2, identification_2
         else:
-            return self.collimate_axis(fixed_points, float_points, path)
+            return self.collimate_axis(fixed_points, float_points, path, is_save=is_save)
         return float_points_, bias, identification
 
     def turn_over_by_axis(self, axis):

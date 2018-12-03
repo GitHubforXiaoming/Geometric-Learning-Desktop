@@ -9,23 +9,26 @@ from visualization import *
 
 def usage():
     print('usage of fractures match')
-    print('-p, --prefix(demand): the title prefix of fractures')
-    print('-v, --visualizaiton: visualize the model in vtk')
-    print('-d, --decrease: the flag of decrease the number of cluster')
-    print('-k, --cluster(default 6): the number of clusters')
-    print('-c, --comparsion: begin the comparsion among the fractures')
-    print('-t, --test: process test code without core opration')
-    print('-h, --help: print help message')
+    print('-p, --prefix(demand): the title prefix of fractures.')
+    print('-m, --match: load the match pairs from file. e.g. -m ./match-pair/plate-1.txt')
+    print('-v, --visualizaiton: visualize the model in vtk.')
+    print('-d, --decrease: the flag of decrease the number of cluster.')
+    print('-k, --cluster(default 6): the number of clusters.')
+    print('-c, --comparsion: begin the comparsion among the fractures.')
+    print('-t, --test: process test code without core opration.')
+    print('-s, --save: save the comparsion result or not.')
+    print('-h, --help: print help message.')
 
 def parse_args(argv):
     args = argv[1:]
     try:
-        opts, args = getopt.getopt(args, 'p:vdk:cth', ['prefix=', 'cluster='])
+        opts, args = getopt.getopt(args, 'p:m:vdk:cth', ['prefix=', 'cluster=', 'match='])
     except getopt.GetoptError as err:
         print(err)
         usage()
         sys.exit(2)
     prefix = ''
+    pairs = {}
     n_cluster = const_values.FLAGS.default_n_cluster
     flag = False
     for o, a in opts:
@@ -47,10 +50,26 @@ def parse_args(argv):
                 tv.visualize_models_auto(datas)
         elif o in ('-p', '--prefix'):
             prefix = a
+        elif o in ('-m', '--match'):
+            # load fragments
+            utils = Utils(prefix, k=n_cluster)
+            utils.load_all_fragment()
+
+            # read match pairs
+            with open(a) as file:
+                for line in file:
+                    l = line.strip('\n').split('&')
+                    pairs[l[0]] = l[1]
+            # print(pairs)
+
         elif o in ('-t', '--test'):
             utils = Utils(prefix, k=n_cluster)
-            length, names = utils.generate_datas(is_decrease=flag)[-2::]
-            print(length, names)
+            utils.load_all_fragment()
+            for key in pairs:
+                utils.transform_pair(key, pairs[key])
+
+            # length, names = utils.generate_datas(is_decrease=flag)[-2::]
+            # print(length, names)
             # print(np.mean(length))
         elif o in ('-d', '--decrease'):
             flag = True

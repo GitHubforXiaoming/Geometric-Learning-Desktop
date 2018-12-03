@@ -18,6 +18,8 @@ class Utils:
         self.k = k
         self.datas = []
         self.fragments = []
+        self.tv = TridimensionalVisualization()
+        self.transform = Transform()
 
 
     # @property
@@ -59,8 +61,34 @@ class Utils:
             fractures = [self.read_stl(const_values.FLAGS.dir_of_fractures + j) for j in names_of_fracture[i]]
             self.fragments.append(Fragment(fragment, fractures, self.prefix))
 
+    def get_control_points(self, poly_data):
+        n = poly_data.GetNumberOfPoints()
+        X = np.zeros((n, 3), dtype=np.float64)
+        
+        points = poly_data.GetPoints()
+        for i in range(n):
+            X[i] = points.GetPoint(i)
 
-    # def transform_pair(self, name_of_fixed, name_of_float):
+        kmeans = KMeans(n_clusters=k)
+        kmeans.fit(X)
+        centers = kmeans.cluster_centers_
+
+        # serialize the center points
+        centers = self.serialize_centers(centers)
+        return centers
+
+    def transform_pair(self, name_of_fixed, name_of_float):
+        # parse name
+        fixed_fragment_id, float_fragment_id = int(name_of_fixed.split('-')[1]) - 1, int(name_of_float.split('-')[1]) - 1
+        fixed_fracture_id, float_fracture_id = ord(name_of_fixed.split('-')[2]) - ord('a'), ord(name_of_float.split('-')[2]) - ord('a')
+        fixed_fragment, float_fragmet = self.fragments[fixed_fragment_id], self.fragments[float_fragment_id]
+        fixed_fracture, float_fracture = fixed_fragment.fractures[fixed_fracture_id], float_fragmet.fractures[float_fracture_id]
+
+        # test
+        # self.tv.visualize_models_man(fixed_fracture, float_fracture)
+
+        fixed_points, float_points = self.get_control_points(fixed_fracture, float_fracture)
+        self.transform.collimate_axis_general(fixed_points, float_points)
 
 
 
@@ -152,7 +180,7 @@ class Utils:
             [name for name in file_names if name.startswith(self.prefix)]
 
 
-    def comparsion(self, is_decrease):
+    def comparsion(self, is_decrease, is_save=False):
         all_points, all_random_points, all_centers, all_length, file_names = self.generate_datas(is_decrease)
         centers = np.array([np.mean(center, 0) for center in all_centers])
 
@@ -172,9 +200,10 @@ class Utils:
                         print(path)
                         os.makedirs(path)
 
-                    float_points_, bias, identification = transform.collimate_axis_general(fixed_points, float_points, path)
+                    float_points_, bias, identification, _, _ = transform.collimate_axis_general(fixed_points, float_points, is_save=is_save)
                     min_bais.append(bias)
-                    transform.save_fig(const_values.FLAGS.dir_of_fracture_comparsion_pics, file_names[i] + ' compares to ' + file_names[j] + '.png', fixed_points, float_points_)
+                    if is_save:
+                        transform.save_fig(const_values.FLAGS.dir_of_fracture_comparsion_pics, file_names[i] + ' compares to ' + file_names[j] + '.png', fixed_points, float_points_)
 
                 else:
                     alternative_pair[file_names[j]] = np.inf
