@@ -29,6 +29,19 @@ class Transform:
                 matrix.SetElement(i, j, T[i][j])
 
         return matrix
+
+    
+    def transform_data(self, matrix, data):
+        transform = vtk.vtkTransform()
+        transform.SetMatrix(matrix)
+
+        transformFilter = vtk.vtkTransformPolyDataFilter()
+        transformFilter.SetInputData(data)
+        transformFilter.SetTransform(transform)
+        transformFilter.Update()
+
+        return transformFilter.GetOutput()
+
     
     def transform_points(self, matrix, points):
         '''
@@ -156,12 +169,13 @@ class Transform:
         return points
 
     def save_fig(self, path, title, fixed_points, float_points_):
+        print(path + title + '.png')
         plt.style.use('ggplot')
         fig = plt.figure()
         ax = Axes3D(fig)
         fv = FlatVisualization(ax)
         fv.paint_two_points(fixed_points, float_points_, title= title)
-        fig.savefig(path + title + '.png', dpi=600)
+        fig.savefig(path + title + '.png', dpi=200)
         plt.close(fig)
 
 
@@ -265,13 +279,13 @@ class Transform:
         bias = 0
         identification = 0
         if m < n:
-            points_1, bias_1, identification_1 = self.collimate_axis(fixed_points, float_points[:m], path)
-            points_2, bias_2, identification_2 = self.collimate_axis(fixed_points, float_points[n - m:], path)
+            points_1, bias_1, identification_1 = self.collimate_axis(fixed_points, float_points[:m], path + '1-')
+            points_2, bias_2, identification_2 = self.collimate_axis(fixed_points, float_points[n - m:], path + '2-')
             if bias_1 < bias_2: float_points_, bias, identification = points_1, bias_1, identification_1
             else: float_points_, bias, identification = points_2, bias_2, identification_2
         elif m > n:
-            points_1, bias_1, identification_1 = self.collimate_axis(fixed_points[:n], float_points, path)
-            points_2, bias_2, identification_2 = self.collimate_axis(fixed_points[m - n:], float_points, path)
+            points_1, bias_1, identification_1 = self.collimate_axis(fixed_points[:n], float_points, path + '3-')
+            points_2, bias_2, identification_2 = self.collimate_axis(fixed_points[m - n:], float_points, path + '4-')
             if bias_1 < bias_2: float_points_, bias, identification = points_1, bias_1, identification_1
             else: float_points_, bias, identification = points_2, bias_2, identification_2
         else:

@@ -9,6 +9,7 @@ from sklearn.decomposition import PCA
 from sklearn.neighbors import KDTree
 from transform import *
 from visualization import *
+from fragment import Fragment
 
 class Utils:
 
@@ -16,6 +17,7 @@ class Utils:
         self.prefix = prefix
         self.k = k
         self.datas = []
+        self.fragments = []
 
 
     # @property
@@ -30,6 +32,36 @@ class Utils:
 
         poly_data = reader.GetOutput()
         return poly_data
+
+
+    def load_all_fragment(self):
+        file_names_of_plates = os.listdir(const_values.FLAGS.dir_of_plates)
+        file_names_of_fractures = os.listdir(const_values.FLAGS.dir_of_fractures)
+        names_of_fragment = []
+        
+        for name_of_plate in file_names_of_plates:
+            if name_of_plate.endswith(self.prefix):
+                file_names_of_fragments = os.listdir(const_values.FLAGS.dir_of_plates + name_of_plate)
+                for name_of_fragment in file_names_of_fragments:
+                    if name_of_fragment.endswith('.stl'):
+                        names_of_fragment.append(name_of_plate + '/' + name_of_fragment)
+        # print(names_of_fragment)
+        names_of_fracture = [[] for _ in range(len(names_of_fragment))]
+        for name_of_fracture in file_names_of_fractures:
+            s = name_of_fracture.split('-')
+            if s[0] == self.prefix:
+                names_of_fracture[int(s[1]) - 1].append(name_of_fracture)
+        # print(names_of_fracture)
+        for i in range(len(names_of_fragment)):
+            # print('fragment: ', const_values.FLAGS.dir_of_plates + names_of_fragment[i])
+            # print('fracture: ', const_values.FLAGS.dir_of_fractures + names_of_fracture[i][0])
+            fragment = self.read_stl(const_values.FLAGS.dir_of_plates + names_of_fragment[i])
+            fractures = [self.read_stl(const_values.FLAGS.dir_of_fractures + j) for j in names_of_fracture[i]]
+            self.fragments.append(Fragment(fragment, fractures, self.prefix))
+
+
+    # def transform_pair(self, name_of_fixed, name_of_float):
+
 
 
     def serialize_centers(self, centers):
@@ -121,7 +153,7 @@ class Utils:
 
 
     def comparsion(self, is_decrease):
-        all_points, all_random_points, all_centers, all_length, file_names = self.generate_datas()
+        all_points, all_random_points, all_centers, all_length, file_names = self.generate_datas(is_decrease)
         centers = np.array([np.mean(center, 0) for center in all_centers])
 
         icp = ICP()
