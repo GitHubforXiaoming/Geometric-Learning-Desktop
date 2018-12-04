@@ -13,7 +13,7 @@ from fragment import Fragment
 
 class Utils:
 
-    def __init__(self, prefix, k=6):
+    def __init__(self, prefix, k=12):
         self.prefix = prefix
         self.k = k
         self.datas = []
@@ -69,13 +69,13 @@ class Utils:
         for i in range(n):
             X[i] = points.GetPoint(i)
 
-        kmeans = KMeans(n_clusters=k)
+        kmeans = KMeans(n_clusters=self.k)
         kmeans.fit(X)
         centers = kmeans.cluster_centers_
 
         # serialize the center points
         centers = self.serialize_centers(centers)
-        return centers
+        return X, centers
 
     def transform_pair(self, name_of_fixed, name_of_float):
         # parse name
@@ -84,12 +84,22 @@ class Utils:
         fixed_fragment, float_fragmet = self.fragments[fixed_fragment_id], self.fragments[float_fragment_id]
         fixed_fracture, float_fracture = fixed_fragment.fractures[fixed_fracture_id], float_fragmet.fractures[float_fracture_id]
 
+        fixed_points, _, = self.get_control_points(fixed_fracture)
+        float_points, _ = self.get_control_points(float_fracture)
+        float_points_, bias, identification, rotate_matrices, translate_matrices = self.transform.collimate_axis_general(fixed_points, float_points, '')
+
+        fixed_fragment.visualization_contrast(float_fragmet)
+
+        if identification is const_values.const.AXIS_TYPE['main'] or identification is const_values.const.AXIS_TYPE['secondary']:
+            float_fragmet.self_transform(rotate_matrices)
+            float_fragmet.self_transform(translate_matrices)
+        elif identification is const_values.const.AXIS_TYPE['both']:
+            for rotate_matrix, translate_matrix in zip(rotate_matrices, translate_matrices):
+                float_fragmet.self_transform(rotate_matrix)
+                float_fragmet.self_transform(translate_matrix)
+        
         # test
-        # self.tv.visualize_models_man(fixed_fracture, float_fracture)
-
-        fixed_points, float_points = self.get_control_points(fixed_fracture, float_fracture)
-        self.transform.collimate_axis_general(fixed_points, float_points)
-
+        fixed_fragment.visualization_contrast(float_fragmet)
 
 
     def serialize_centers(self, centers):

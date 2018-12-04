@@ -73,15 +73,6 @@ class Transform:
     def angle_of_normal(self, a, b):
         return math.acos(a.dot(b) / (np.linalg.norm(a) * np.linalg.norm(b)))
 
-    def transform_data(self, matrix, data):
-        transform = vtk.vtkTransform()
-        transform.SetMatrix(matrix)
-        filter = vtk.vtkTransformPolyDataFilter()
-        filter.SetInputData(data)
-        filter.SetTransform(transform)
-        filter.Update()
-
-        return filter.GetOutput()
 
     def rotate_by_any_axis(self, axis, theta):
         '''
@@ -297,19 +288,22 @@ class Transform:
         float_points_ = float_points
         bias = 0
         identification = 0
+        rotate_matrices, translate_matrices = vtk.vtkMatrix4x4(), vtk.vtkMatrix4x4()
         if m < n:
-            points_1, bias_1, identification_1 = self.collimate_axis(fixed_points, float_points[:m], path + '1-', is_save=is_save)
-            points_2, bias_2, identification_2 = self.collimate_axis(fixed_points, float_points[n - m:], path + '2-', is_save=is_save)
-            if bias_1 < bias_2: float_points_, bias, identification = points_1, bias_1, identification_1
-            else: float_points_, bias, identification = points_2, bias_2, identification_2
+            points_1, bias_1, identification_1, rotate_matrices_1, translate_matrices_1 = self.collimate_axis(fixed_points, float_points[:m], path + '1-', is_save=is_save)
+            points_2, bias_2, identification_2, rotate_matrices_2, translate_matrices_2 = self.collimate_axis(fixed_points, float_points[n - m:], path + '2-', is_save=is_save)
+            if bias_1 < bias_2: float_points_, bias, identification, rotate_matrices, translate_matrices = points_1, bias_1, identification_1, rotate_matrices_1, translate_matrices_1
+            else: float_points_, bias, identification, rotate_matrices, translate_matrices = \
+                points_2, bias_2, identification_2, rotate_matrices_2, translate_matrices_2
         elif m > n:
-            points_1, bias_1, identification_1 = self.collimate_axis(fixed_points[:n], float_points, path + '3-', is_save=is_save)
-            points_2, bias_2, identification_2 = self.collimate_axis(fixed_points[m - n:], float_points, path + '4-', is_save=is_save)
-            if bias_1 < bias_2: float_points_, bias, identification = points_1, bias_1, identification_1
-            else: float_points_, bias, identification = points_2, bias_2, identification_2
+            points_1, bias_1, identification_1, rotate_matrices_1, translate_matrices_1 = self.collimate_axis(fixed_points[:n], float_points, path + '3-', is_save=is_save)
+            points_2, bias_2, identification_2, rotate_matrices_2, translate_matrices_2 = self.collimate_axis(fixed_points[m - n:], float_points, path + '4-', is_save=is_save)
+            if bias_1 < bias_2: float_points_, bias, identification, rotate_matrices, translate_matrices = points_1, bias_1, identification_1, rotate_matrices_1, translate_matrices_1
+            else: float_points_, bias, identification, rotate_matrices, translate_matrices = \
+                points_2, bias_2, identification_2, rotate_matrices_2, translate_matrices_2
         else:
             return self.collimate_axis(fixed_points, float_points, path, is_save=is_save)
-        return float_points_, bias, identification
+        return float_points_, bias, identification, rotate_matrices, translate_matrices
 
     def turn_over_by_axis(self, axis):
         return self.rotate_by_any_axis(axis, np.pi / 2)

@@ -1,6 +1,7 @@
 import const_values
 import getopt
 import numpy as np
+import os
 import sys
 import time
 from utils import Utils
@@ -39,15 +40,25 @@ def parse_args(argv):
             utils = Utils(prefix, k=n_cluster)
             tv = TridimensionalVisualization()
             # visualize the control points on the fracture
-            all_centers = utils.generate_datas(is_decrease=flag)[2]
-            for data, centers in zip(utils.datas, all_centers):
-                datas = []
-                datas.append(data)
-                points_data = tv.convert_points_to_data(centers)
-                datas.append(points_data)
-                for center in centers:
-                    datas.append(tv.draw_sphere(center, 1))
-                tv.visualize_models_auto(datas)
+            # all_centers = utils.generate_datas(is_decrease=flag)[2]
+            # for data, centers in zip(utils.datas, all_centers):
+            #     datas = []
+            #     datas.append(data)
+            #     points_data = tv.convert_points_to_data(centers)
+            #     datas.append(points_data)
+            #     for center in centers:
+            #         datas.append(tv.draw_sphere(center, 1))
+            #     tv.visualize_models_auto(datas)
+            # visualize the pre-alignment of plate
+            ploy_datas = []
+            pre_plate_file_names = os.listdir(const_values.FLAGS.dir_of_pre_plates)
+            for plate_name in pre_plate_file_names:
+                if plate_name.endswith(prefix):
+                    for fragment_name in os.listdir(const_values.FLAGS.dir_of_pre_plates + plate_name):
+                        print(const_values.FLAGS.dir_of_pre_plates + plate_name + '/' + fragment_name)
+                        ploy_datas.append(utils.read_stl(const_values.FLAGS.dir_of_pre_plates + plate_name + '/' + fragment_name))
+            tv.visualize_models_auto(ploy_datas)
+
         elif o in ('-p', '--prefix'):
             prefix = a
         elif o in ('-m', '--match'):
@@ -61,6 +72,9 @@ def parse_args(argv):
                     l = line.strip('\n').split('&')
                     pairs[l[0]] = l[1]
             # print(pairs)
+            for key in pairs:
+                print(key + ' matches with ' + pairs[key])
+                utils.transform_pair(key, pairs[key])
 
         elif o in ('-t', '--test'):
             utils = Utils(prefix, k=n_cluster)
