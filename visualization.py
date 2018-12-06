@@ -70,14 +70,16 @@ class TridimensionalVisualization:
 
     def visualize_models_auto(self, datas):
         ren= vtk.vtkRenderer()  
-        for data in datas:
+        color_index = np.arange(const_values.const.LEN_OF_COLOR)
+        np.random.shuffle(color_index)
+        for data, i in zip(datas, range(len(datas))):
             mapper = vtk.vtkPolyDataMapper()  
             mapper.SetInputData(data)  
             
             actor = vtk.vtkActor()  
             actor.SetMapper(mapper) 
             #actor.GetProperty().SetPointSize(10) 
-            actor.GetProperty().SetColor(np.array(const_values.const.COLOR[np.random.randint(0, const_values.const.LEN_OF_COLOR)]) / 255.0)
+            actor.GetProperty().SetColor(np.array(const_values.const.COLOR[color_index[i]]) / 255.0)
             ren.AddActor( actor )  
             # ren.SetBackground( 0 / 255.0, 166 / 255.0, 222 / 255.0 ) 
             ren.SetBackground( 255 / 255.0, 255 / 255.0, 255 / 255.0 ) 

@@ -5,6 +5,7 @@ flags = tf.app.flags
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('default_n_cluster', 12, 'the default number of cluster')
 flags.DEFINE_string('dir_of_plates', './plates/', 'the fragments of one plate')
+flags.DEFINE_string('dir_of_pre_plates', './pre-plates/', 'the fragments of one plate after alignment')
 flags.DEFINE_string('dir_of_fractures', './fractures/', 'the directory of fractures')
 flags.DEFINE_string('dir_of_fracture_comparsion_pics', './fracture_comparsion_pics/', 'the directory of comparsion results among the fractures')
 flags.DEFINE_string('dir_of_axis_transformation_pics', './axis_transformation_pics/', 'the directory of comparsion results among ratation between two fractures')
