@@ -2,6 +2,7 @@ import const_values
 import getopt
 import numpy as np
 import os
+import re
 import sys
 import time
 import vtk
@@ -19,25 +20,34 @@ def read_stl(file_name):
 
 def usage():
     print('usage of fractures match')
-    print('-d, --dir: specify the directory of the re-assembly plates.')
+    print('-d, --dir: specify the directory of the re-assembly plates. e.g. -d ./plates/plate-1/')
     print('-r, --random: draw descriptor randomly, require the random number. e.g. -r 10')
-    print('-c, --config: config the options of descriptor, [num of points on disc(32)] [num of circles(32)] [init radius(0.1)] [radius delta(0.1)] [distance from disc(1)]')
-    print('-v, --visualization: options([points, lines, circles, datas])')
+    print('-c, --config: config the options of descriptor.')
+    print('             ', '[distance from disc(1)]') 
+    print('             ', '[num of points on disc(32)]') 
+    print('             ', '[num of circles(32)]') 
+    print('             ', '[init radius(0.1)]') 
+    print('             ', '[radius delta(0.1)]')
+    print('-v, --visualization: options([p:points, l:lines, c:circles, s:source]). e.g. -v p,l,c,s')
     print('-h, --help: print help message.')
 
 
 def valid_input(message, value):
     val = input(message)
-    if val == '\n':
-        pass
-        
-    return val
+    if len(val) is 0:
+        return
+    pattern = re.compile(r'^[-+]?[0-9]+\.[0-9]+$')
+    while pattern.match(val):
+        print('invalid input')
+        val = input(message)
+    else:
+        value = float(val)
 
 
 def parse_args(argv):
     args = argv[1:]
     try:
-        opts, args = getopt.getopt(args, 'd:r:', ['dir=', 'random='])
+        opts, args = getopt.getopt(args, 'd:r:cv:h', ['dir=', 'random=', 'config', 'visualization=', 'help'])
     except getopt.GetoptError as err:
         print(err)
         usage()
@@ -50,6 +60,8 @@ def parse_args(argv):
     init_radius = 0.1
     radius_delta = 0.1
     file_names = []
+    visual_flag = False
+    visual_opts = []
     for o, a in opts:
         if o in ('-h', '--help'):
             usage()
@@ -63,12 +75,14 @@ def parse_args(argv):
         elif o in ('-r', '--random'):
             random_num = int(a)
         elif o in ('-c', '--config'):
-            distance_from_mesh = valid_input('distance from disc(1): ')
-            num_of_points_on_disc = valid_input('num of points on disc(32): ')
-            num_of_circle = valid_input('num of circles(32): ')
-            init_radius = valid_input('init radius(0.1): ')
-            radius_delta = valid_input('radius delta(0.1): ')
-
+            valid_input('distance from disc(1): ', distance_from_mesh)
+            valid_input('num of points on disc(32): ', num_of_points_on_disc)
+            valid_input('num of circles(32): ', num_of_circle)
+            valid_input('init radius(0.1): ', init_radius)
+            valid_input('radius delta(0.1): ', radius_delta)
+        elif o in ('-v', '--visualization'):
+            visual_opts = a.split(',')
+            visual_flag = True
         else:
             print('unhandled option')
             sys.exit(3)
@@ -89,10 +103,20 @@ def parse_args(argv):
         visualized_datas = []
         circles = descriptor.draw_circles()
         lines_datas, points_datas = descriptor.draw_lines()
-        visualized_datas.append(poly_data)
-        visualized_datas.extend(circles)
-        visualized_datas.extend(points_datas)
-        visualized_datas.extend(lines_datas)
+        if not visual_flag:
+            visualized_datas.append(poly_data)
+            visualized_datas.extend(circles)
+            visualized_datas.extend(points_datas)
+            visualized_datas.extend(lines_datas)
+        else:
+            if 's' in visual_opts:
+                visualized_datas.append(poly_data)
+            if 'c' in visual_opts:
+                visualized_datas.extend(circles)
+            if 'p' in visual_opts:
+                visualized_datas.extend(points_datas)
+            if 'l' in visual_opts:
+                visualized_datas.extend(lines_datas)       
         descriptor.visualize_models(visualized_datas)
 
 
