@@ -99,7 +99,7 @@ def plot(fig, points, color, position, title, labels, cluster=6):
     w = np.array([pca.components_[1][2], -pca.components_[1][2]])
     ax.quiver(x, y, z, u, v, w, length=10)
 
-    ax.set_title(title)
+    # ax.set_title(title)
 
 fixed_poly_data = read_stl('./fractures/3-2-a.stl')
 float_poly_data = read_stl('./fractures/3-3-a.stl')
@@ -115,12 +115,14 @@ float_points = np.zeros((n, 3), dtype=np.float64)
 for i in range(m): fixed_points[i] = fixed_poly_points.GetPoint(i)
 for i in range(n): float_points[i] = float_poly_points.GetPoint(i)
 plt.style.use('ggplot')
-fig = plt.figure(figsize=(16, 6))
+fig = plt.figure(figsize=(5, 8))
 labels_1 = [r'$\mathbf{a}_i^1$', r'$\mathbf{b}_i^1$', r'$\mathbf{a}_i^2$', r'$\mathbf{b}_i^2$']
 labels_2 = [r'$\mathbf{a}_j^1$', r'$\mathbf{b}_j^1$', r'$\mathbf{a}_j^2$', r'$\mathbf{b}_j^2$']
 title_1 = 'control points on fracture #2-a'
 title_2 = 'control points on fracture #3-a'
-plot(fig, fixed_points, 'teal', 121, title_1, labels_1, cluster=16)
-plot(fig, float_points, 'darkgreen', 122, title_2, labels_2, cluster=16)
+plot(fig, fixed_points, 'teal', 211, title_1, labels_1, cluster=16)
+plot(fig, float_points, 'darkgreen', 212, title_2, labels_2, cluster=16)
 
 plt.show()
+# fig.savefig('main_secondary_axis_vertical.png', dpi=500)
+# plt.close(fig)

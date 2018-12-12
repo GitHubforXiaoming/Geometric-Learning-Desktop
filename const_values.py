@@ -3,6 +3,8 @@ import tensorflow as tf
 
 flags = tf.app.flags
 FLAGS = flags.FLAGS
+flags.DEFINE_integer('T', 1000, '')
+flags.DEFINE_float('tolerance_of_obb', 1e-8, '')
 flags.DEFINE_integer('default_n_cluster', 12, 'the default number of cluster')
 flags.DEFINE_string('dir_of_plates', './plates/', 'the fragments of one plate')
 flags.DEFINE_string('dir_of_pre_plates', './pre-plates/', 'the fragments of one plate after alignment')

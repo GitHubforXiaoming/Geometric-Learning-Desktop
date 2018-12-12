@@ -144,6 +144,10 @@ class Utils:
         return np.array(X), np.array(Y)
 
 
+    def value_of_k(self, nums):
+        pass
+
+
     def generate_datas(self, is_decrease=False):
         all_points = []
         all_random_points = []
@@ -169,7 +173,7 @@ class Utils:
                 l = min([len(x) for x in all_points])
                 for points in all_points:
                     all_random_points.append(self.random_sample(points, l))
-
+        len_of_points_set = np.array([len(x) for x in all_points])
         avg_num = np.mean(np.array([len(x) for x in all_points]))
         for X in all_points:
             k = self.k

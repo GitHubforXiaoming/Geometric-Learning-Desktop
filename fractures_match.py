@@ -15,7 +15,7 @@ def usage():
     print('-v, --visualizaiton: visualize the model in vtk.')
     print('-d, --dir: specify the directory of the re-assembly plates.')
     print('--, --decrease: the flag of decrease the number of cluster.')
-    print('-k, --cluster(default 6): the number of clusters.')
+    print('-k, --cluster(default 12): the number of clusters.')
     print('-c, --comparsion: begin the comparsion among the fractures.')
     print('-t, --test: process test code without core opration.')
     print('-s, --save: save the comparsion result or not.')
@@ -42,15 +42,15 @@ def parse_args(argv):
             utils = Utils(prefix, k=n_cluster)
             tv = TridimensionalVisualization()
             # visualize the control points on the fracture
-            # all_centers = utils.generate_datas(is_decrease=flag)[2]
-            # for data, centers in zip(utils.datas, all_centers):
-            #     datas = []
-            #     datas.append(data)
-            #     points_data = tv.convert_points_to_data(centers)
-            #     datas.append(points_data)
-            #     for center in centers:
-            #         datas.append(tv.draw_sphere(center, 1))
-            #     tv.visualize_models_auto(datas)
+            all_centers = utils.generate_datas(is_decrease=flag)[2]
+            for data, centers in zip(utils.datas, all_centers):
+                datas = []
+                datas.append(data)
+                points_data = tv.convert_points_to_data(centers)
+                datas.append(points_data)
+                for center in centers:
+                    datas.append(tv.draw_sphere(center, 1))
+                tv.visualize_models_auto(datas)
             # visualize the pre-alignment of plate
             ploy_datas = []
             if dir_of_plate == '':
