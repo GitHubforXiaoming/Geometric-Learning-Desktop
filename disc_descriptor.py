@@ -1,6 +1,11 @@
 import const_values
+import matplotlib.pyplot as plt
 import numpy as np
+import scipy.misc
 import vtk
+
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import StandardScaler
 
 class DiscDescriptor:
 
@@ -16,9 +21,28 @@ class DiscDescriptor:
         self.all_radii = []
         self.all_points_mesh = []
         self.all_points_disc = []
+        self.all_distances = []
 
     def points_to_array(self, points):
         return np.array([points[x] for x in range(3)])
+
+
+    def max_min_normalization(self, distances):
+        min_max = MinMaxScaler()
+        distances = min_max.fit_transform(distances)
+
+
+    def standard_scaler(self, distances):
+        std = StandardScaler()
+        distances = std.fit_transform(distances)
+
+    def save_FMIs(self, func, distances, name):
+        func(distances)
+        # for i in range(distances.shape[0]):
+        #     sub_name = name[0:-4] + '-' + str(i) + name[-4:]
+        #     scipy.misc.imsave(sub_name, np.roll(distances.T, -i).T)
+        scipy.misc.imsave(name, distances)
+
 
 
     def cell_normal_generator(self, cell_flag=True, point_flag=False):
@@ -41,7 +65,7 @@ class DiscDescriptor:
 
     def center_of_disc(self, normal, p):
         p = np.array(p)
-        delta = np.sqrt(sum(normal ** 2)) * self.distance_from_mesh
+        delta = np.sqrt(sum(normal ** 2)) / self.distance_from_mesh
         return normal / delta + p
 
     
@@ -63,13 +87,14 @@ class DiscDescriptor:
     
     def compute_descriptor(self, obb, normal, center_disc, radius):
         points = []
+        distances = []
         points_disc = self.points_on_disc(normal, center_disc, radius)
         for p in points_disc:
             point_other_side = -normal * const_values.FLAGS.T + p
-
+            point_another_size = normal * const_values.FLAGS.T + p
             intersected_points, intersected_cells = vtk.vtkPoints(), vtk.vtkIdList()
             obb.SetTolerance(const_values.FLAGS.tolerance_of_obb)
-            obb.IntersectWithLine(point_other_side, p, intersected_points, intersected_cells)
+            obb.IntersectWithLine(point_other_side, point_another_size, intersected_points, intersected_cells)
 
             intersect = []
             if intersected_points.GetNumberOfPoints() > 1:
@@ -78,18 +103,28 @@ class DiscDescriptor:
                     if np.linalg.norm(p - self.points_to_array(intersected_points.GetPoint(i))) < min_distance:
                         min_distance = np.linalg.norm(p - self.points_to_array(intersected_points.GetPoint(i)))
                         intersect = self.points_to_array(intersected_points.GetPoint(i))
+                vec = p - intersect
+                vec = vec / np.linalg.norm(vec)
+                if vec.dot(normal) < 0:
+                    distances.append(-np.linalg.norm(p - intersect))
+                else:
+                    distances.append(np.linalg.norm(p - intersect))
             elif intersected_points.GetNumberOfPoints() == 0:
                 intersect = p
+                distances.append(0.0)
             else:
                 intersect = [intersected_points.GetPoint(0)[x] for x in range(3)]
+                distances.append(np.linalg.norm(p - intersect)) 
             intersect = np.array(intersect)
 
+            
             points.append(intersect)
         points_mesh = np.array(points)
-        return points_mesh, points_disc
+        distances = np.array(distances)
+        return points_mesh, points_disc, distances
 
 
-    def mesh_descriptors(self, random_num=0):
+    def mesh_descriptors(self, FMIs_dir, type_of_normalize, random_num=0):
         self.cell_normal_generator(cell_flag=True, point_flag=False)
         normals = self.source.GetCellData().GetNormals()
         centers = self.centers_of_cells()
@@ -112,13 +147,23 @@ class DiscDescriptor:
             center = np.array([centers.GetPoint(i)[x] for x in range(3)])
             center_disc = self.center_of_disc(normal, center)
             radii = []
+            distances = []
             for j in range(self.num_of_circle):
                 radius = self.init_radius + j * self.radius_delta
                 radii.append(radius)
-                points_mesh, points_disc = self.compute_descriptor(obb, normal, center_disc, radius)
+                points_mesh, points_disc, d = self.compute_descriptor(obb, normal, center_disc, radius)
                 # print('distance: ', [np.linalg.norm(x - y) for x, y in zip(points_mesh, points_disc)])
+                distances.append(d)
                 self.all_points_mesh.append(points_mesh)
                 self.all_points_disc.append(points_disc)
+            distances = np.array(distances)
+            name = FMIs_dir + str(i) + '.bmp'
+            if type_of_normalize is 0:
+                self.save_FMIs(self.max_min_normalization, distances, name)
+            else:
+                self.save_FMIs(self.standard_scaler, distances, name)
+            # self.hist_distances(distances.reshape((distances.shape[0] * distances.shape[1], 1)))
+            self.all_distances.append(distances)
             self.all_normals.append(normal)
             self.all_centers_disc.append(center_disc)
             self.all_radii.append(np.array(radii))
@@ -181,6 +226,13 @@ class DiscDescriptor:
 
         return line_datas, points_datas
 
+    def hist_distances(self, distances, label='distances'):
+        plt.style.use( 'ggplot')
+        plt.hist(distances, bins = len(distances), color = 'steelblue', label = label)
+
+        plt.tick_params(top = 'off', right = 'off')
+        plt.legend()
+        plt.show()
 
     def visualize_models(self, datas):
         ren= vtk.vtkRenderer()  

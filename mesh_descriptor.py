@@ -28,6 +28,8 @@ def usage():
     print('             ', '[num of circles(32)]') 
     print('             ', '[init radius(0.1)]') 
     print('             ', '[radius delta(0.1)]')
+    print('-s, --save: save features to image. [min-max, z-score]. e.g. -s min-max')
+    print('-g, --generate: generate data only, do not visualize.')
     print('-v, --visualization: options([p:points, l:lines, c:circles, s:source]). e.g. -v p,l,c,s')
     print('-h, --help: print help message.')
 
@@ -47,7 +49,7 @@ def valid_input(message, value):
 def parse_args(argv):
     args = argv[1:]
     try:
-        opts, args = getopt.getopt(args, 'd:r:cv:h', ['dir=', 'random=', 'config', 'visualization=', 'help'])
+        opts, args = getopt.getopt(args, 'd:r:cs:v:gh', ['dir=', 'random=', 'config', 'save=', 'visualization=', 'generate', 'help'])
     except getopt.GetoptError as err:
         print(err)
         usage()
@@ -60,7 +62,10 @@ def parse_args(argv):
     init_radius = 0.1
     radius_delta = 0.1
     file_names = []
+    FMIs_dirs = []
     visual_flag = False
+    generate_flag = False
+    type_of_normalize = 0
     visual_opts = []
     for o, a in opts:
         if o in ('-h', '--help'):
@@ -80,6 +85,20 @@ def parse_args(argv):
             valid_input('num of circles(32): ', num_of_circle)
             valid_input('init radius(0.1): ', init_radius)
             valid_input('radius delta(0.1): ', radius_delta)
+        elif o in('-s', '--save'):
+            if len(file_names) is not 0:
+                if a == 'max-min':
+                    type_of_normalize = 0
+                elif a == 'z-score':
+                    type_of_normalize = 1
+                for name in file_names:
+                    path = name[0:-4] + '-FMIs/'
+                    FMIs_dirs.append(path)
+                    if not os.path.exists(path):
+                        print(path)
+                        os.makedirs(path)
+        elif o in ('-g', '--generate'):
+            generate_flag = True
         elif o in ('-v', '--visualization'):
             visual_opts = a.split(',')
             visual_flag = True
@@ -87,10 +106,10 @@ def parse_args(argv):
             print('unhandled option')
             sys.exit(3)
     
-    for file_name in file_names:
+    for file_name, FMIs_dir in zip(file_names, FMIs_dirs):
         poly_data = read_stl(file_name)
         descriptor = DiscDescriptor(poly_data)
-        descriptor.mesh_descriptors(random_num=random_num)
+        descriptor.mesh_descriptors(FMIs_dir, type_of_normalize, random_num=random_num)
 
         # config desriptor
         descriptor.distance_from_mesh = distance_from_mesh
@@ -100,24 +119,25 @@ def parse_args(argv):
         descriptor.radius_delta = radius_delta
 
         # visualization
-        visualized_datas = []
-        circles = descriptor.draw_circles()
-        lines_datas, points_datas = descriptor.draw_lines()
-        if not visual_flag:
-            visualized_datas.append(poly_data)
-            visualized_datas.extend(circles)
-            visualized_datas.extend(points_datas)
-            visualized_datas.extend(lines_datas)
-        else:
-            if 's' in visual_opts:
+        if not generate_flag:
+            visualized_datas = []
+            circles = descriptor.draw_circles()
+            lines_datas, points_datas = descriptor.draw_lines()
+            if not visual_flag:
                 visualized_datas.append(poly_data)
-            if 'c' in visual_opts:
                 visualized_datas.extend(circles)
-            if 'p' in visual_opts:
                 visualized_datas.extend(points_datas)
-            if 'l' in visual_opts:
-                visualized_datas.extend(lines_datas)       
-        descriptor.visualize_models(visualized_datas)
+                visualized_datas.extend(lines_datas)
+            else:
+                if 's' in visual_opts:
+                    visualized_datas.append(poly_data)
+                if 'c' in visual_opts:
+                    visualized_datas.extend(circles)
+                if 'p' in visual_opts:
+                    visualized_datas.extend(points_datas)
+                if 'l' in visual_opts:
+                    visualized_datas.extend(lines_datas)       
+            descriptor.visualize_models(visualized_datas)
 
 
 def main(argv):
